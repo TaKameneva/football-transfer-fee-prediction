@@ -109,8 +109,6 @@ class DataProcessor:
             self._data[flag] = self._data[col].notna().astype(int)
             self._data[col] = self._data[col].fillna(0)
         
-        # self._data.drop(columns=['player_name', 'season_half_idx', 'buying_club', 'selling_league', 'position'], inplace=True, errors='ignore')
-        # self._data_class.drop(columns=['player_name', 'season_half_idx', 'transfer_fee'], inplace=True, errors='ignore')
         self._data.drop(columns=['player_name', 'season_half_idx'], inplace=True, errors='ignore')
         self._data = threshold_filter(self._data, 0.8, ['transfer_fee'] + cat_var)        
             
@@ -157,15 +155,9 @@ class DataProcessor:
         self.prepare_data()
         self._data_raw = self._data.copy()
         self.encode_cat_vars()
-        
-        # for column in self._data.columns:
-        #     try:
-        #         self._data[column] = pd.to_numeric(self._data[column])
-        #     except Exception as e:
-        #         continue
         self.add_fee_class()
         self.train_test_splitter()
-        # self.delete_cols()
+
         # Create matching splits for raw data
         self._training_data_raw = self._data_raw.loc[self._training_data.index].copy()
         self._test_data_raw = self._data_raw.loc[self._test_data.index].copy()

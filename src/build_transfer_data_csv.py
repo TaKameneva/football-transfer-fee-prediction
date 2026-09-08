@@ -3,15 +3,14 @@ import numpy as np
 from lists import transfer_data_keep, league_map, transfer_columns_full
 import sys
 
-transfer_data1 = pd.read_csv('transfers_dataset_4.csv', names=transfer_columns_full)
-transfer_data2 = pd.read_csv('transfers_dataset_5.csv', names=transfer_columns_full)
+transfer_data1 = pd.read_csv('data/transfers_dataset_4.csv', names=transfer_columns_full)
+transfer_data2 = pd.read_csv('data/transfers_dataset_5.csv', names=transfer_columns_full)
 
 if transfer_data1.shape[1] != transfer_data2.shape[1]:
     print("ERROR: transfer_data1 and transfer_data2 have different number of columns.")
     sys.exit(1)
 
 transfer_data = pd.concat([transfer_data1, transfer_data2], ignore_index=True)
-# print(transfer_data.columns)
 print(f'Transfer data initial shape: {transfer_data.shape}')
 #############################################
 #create transfer_window_idx column
@@ -79,9 +78,6 @@ print(transfer_data.shape)
 print(transfer_data.isna().sum())
 print('-'*50)
 
-#save to csv before handling NaN values
-# transfer_data.to_csv('main_data/transfer_data_with_NaN.csv', index=False)
-
 #############################################
 #handle NaN values
 transfer_data['market_val'] = transfer_data['market_val'].fillna(transfer_data['market_val'].median())
@@ -92,7 +88,7 @@ print("[DataProcessor] Creating availability flags & fixing NaN ratios...")
 
 transfer_data = transfer_data[pd.to_numeric(transfer_data['transfer_fee']) > 0].reset_index(drop=True)
 #save to csv after handling NaN values
-transfer_data.to_csv('transfer_data.csv', index=False)
+transfer_data.to_csv('data/transfer_data.csv', index=False)
 print("After handling NaN values using median:")
 print(transfer_data.shape)
 print(f'Total number of NaN values: {transfer_data.isna().sum().sum()}')

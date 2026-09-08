@@ -11,7 +11,7 @@ log-transformed distribution. The left subplot shows the raw fee distribution
 with heavy right skew, while the right subplot shows the log-transformed version
 to visualize lower-valued transfers more clearly.
 """
-transfer_data = pd.read_csv('transfer_data.csv')
+transfer_data = pd.read_csv('data/transfer_data.csv')
 transfer_data = transfer_data[transfer_data['transfer_fee'] > 0]
 
 fig, axes = plt.subplots(1, 2, figsize=(16, 6))
@@ -27,7 +27,7 @@ axes[1].set_xlabel('Log Transfer Fee')
 axes[1].set_ylabel('Frequency')
 axes[1].legend()
 plt.tight_layout()
-plt.savefig('figure1.png')
+plt.savefig('results/figures/figure1.png')
 print(f'Figure 1 saved.')
 
 """
@@ -59,7 +59,7 @@ axes[2].set_xlabel('Class')
 axes[2].set_ylabel('Transfer Fee')
 plt.suptitle('')
 plt.tight_layout()
-plt.savefig('figure2.png')
+plt.savefig('results/figures/figure2.png')
 print(f'Figure 2 saved.')
 
 """
@@ -75,7 +75,7 @@ plt.title('Median Transfer Fee by Selling League')
 plt.ylabel('Median Transfer Fee (€)')
 plt.tight_layout()
 plt.xticks(rotation=45)
-plt.savefig('figure3a.png')
+plt.savefig('results/figures/figure3a.png')
 print(f'Figure 3a saved.')
 
 """
@@ -88,7 +88,7 @@ plt.scatter(transfer_data['age_at_transfer'], transfer_data['transfer_fee'], alp
 plt.title('Transfer Fee vs Age at Transfer')
 plt.ylabel('Transfer Fee')
 plt.xticks(rotation=45)
-plt.savefig('figure3b.png')
+plt.savefig('results/figures/figure3b.png')
 print(f'Figure 3b saved.')
 
 """
@@ -98,8 +98,8 @@ regularisation settings (alpha, lambda). Shows how different penalties affect
 model performance and overfitting behaviour.
 """
 
-train = pd.read_csv("train_data.csv")
-test = pd.read_csv("test_data.csv")
+train = pd.read_csv("data/train_data.csv")
+test = pd.read_csv("data/test_data.csv")
 X_train = train.drop(columns=['transfer_fee'])
 X_test  = test.drop(columns=['transfer_fee'])
 y_train = train['transfer_fee']
@@ -157,7 +157,7 @@ plt.xlabel("Boosting round")
 plt.ylabel("R² score")
 plt.legend()
 plt.grid(True)
-plt.savefig("figure4a.png")
+plt.savefig("results/figures/figure4a.png")
 print(f'Figure 4 saved.')
 
 
@@ -169,7 +169,7 @@ regression features in a horizontal bar chart.
 """
 
 importances = pd.read_csv(
-    "catboost_importances.csv",
+    "results/catboost_importances.csv",
     index_col=0, header=None,
     names=["feature", "importance"],
     skiprows=1
@@ -182,7 +182,7 @@ plt.gca().invert_yaxis()
 plt.xlabel("Importance")
 plt.title("Top Features")
 plt.tight_layout()
-plt.savefig("figure4b.png")
+plt.savefig("results/figures/figure4b.png")
 print(f'Figure 4b saved.')
 
 """
@@ -193,7 +193,7 @@ to classification performance.
 """
 
 importances = pd.read_csv(
-    "xgb_classifier_importances_label.csv",
+    "results/xgb_classifier_importances_label.csv",
     index_col=0, header=None,
     names=["feature", "importance"]
 )
@@ -206,7 +206,7 @@ plt.gca().invert_yaxis()
 plt.xlabel("Importance")
 plt.title("Top Features")
 plt.tight_layout()
-plt.savefig("figure4c.png")
+plt.savefig("results/figures/figure4c.png")
 print(f'Figure 4c saved.')
 
 
@@ -216,7 +216,7 @@ Plots histograms for every numeric player metric in the dataset.
 Each subplot includes the number of unique values for context.
 This provides an overview of variable distributions.
 """
-player_data = pd.read_csv('player_data.csv')
+player_data = pd.read_csv('data/player_data.csv')
 num_cols = [c for c in player_data.columns.tolist() if pd.api.types.is_numeric_dtype(player_data[c])]
 n = len(num_cols)
 rows = int(np.ceil(n / 5))  
@@ -232,5 +232,5 @@ for ax, col in zip(axes, num_cols):
 for i in range(len(num_cols), len(axes)):
     axes[i].axis("off")
 plt.tight_layout()
-plt.savefig('all_metrics.png')
+plt.savefig('results/figures/all_metrics.png')
 print(f'All player metrics distributions saved.')

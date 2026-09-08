@@ -14,11 +14,9 @@ for league in leagues:
         path = f"scraped_seasons/{league}_{season}.csv"
 
         if not os.path.exists(path):
-            #print(f"Missing file: {path} → skipping.")
             corr += 1
             continue
 
-        #print(f"Loading {path}")
         df = pd.read_csv(path)
         half = (len(df)//2)
         index_column.extend([float(idx + int(season[:4]) + corr)] * half)
@@ -45,9 +43,7 @@ player_data[num_cols] = (
     player_data[num_cols] - player_data[num_cols].mean()
 ) / player_data[num_cols].std(ddof=0)
 
-print('to csv...')
-#player_data.to_csv("main_data/player_data_with_NaN.csv", index=False)
-print(f'Saved in csv. Final Shape: {player_data.shape}')
+print(f'Standardized. Shape: {player_data.shape}')
 
 ###############################################
 #handle nan
@@ -66,7 +62,7 @@ player_data[perc_cols] = player_data[perc_cols].fillna(player_data[perc_cols].me
 
 #Save to CSV
 print('to csv...')
-player_data.to_csv("player_data.csv", index=False)
+player_data.to_csv("data/player_data.csv", index=False)
 print(f'Saved in csv. Final Shape: {player_data.shape}')
 
 for col in player_data.columns:

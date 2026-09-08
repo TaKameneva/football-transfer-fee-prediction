@@ -1,4 +1,5 @@
 import argparse
+import os
 import pandas as pd
 import sys
 import numpy as np
@@ -19,7 +20,6 @@ from standardize import standardize
 
 from lists import cat_var, transfer_data_num
 import logging
-import sys
 
 
 parser = argparse.ArgumentParser()
@@ -27,12 +27,16 @@ parser.add_argument("--position", type=str, default=None, choices=['forward', 'w
 parser.add_argument("--timeframe", type=int, default=1, choices=[1, 2, 3, 4])
 parser.add_argument("--encoder", type=str, default="label", choices=["label", "onehot"])
 args = parser.parse_args()
-log_filename = f"model_run_output_{args.encoder}.log"
+
+os.makedirs("logs", exist_ok=True)
+os.makedirs("results", exist_ok=True)
+log_filename = f"logs/model_run_output_{args.encoder}.log"
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-file_handler = logging.FileHandler(log_filename, mode='w')  # 'w' чтобы каждый запуск перезаписывал
+# mode='w': each run overwrites its own log rather than appending
+file_handler = logging.FileHandler(log_filename, mode='w')
 file_handler.setLevel(logging.INFO)
 
 console_handler = logging.StreamHandler(sys.stdout)
@@ -55,7 +59,6 @@ logger.info("[START] Loading data using DataProcessor ...")
 processor = DataProcessor(full_player_data, transfer_data, args.timeframe, args.position, args.encoder)
 train = processor.training_data
 test  = processor.test_data
-# logger.info(train.columns)
 for col in train.columns:
     train[col] = pd.to_numeric(train[col], errors='coerce')
 
@@ -63,8 +66,8 @@ for col in test.columns:
     test[col] = pd.to_numeric(test[col], errors='coerce')
 
 
-train.to_csv("train_data.csv", index=False)
-test.to_csv("test_data.csv", index=False)
+train.to_csv("data/train_data.csv", index=False)
+test.to_csv("data/test_data.csv", index=False)
 X_train = train.drop(columns=['transfer_fee'])
 X_test  = test.drop(columns=['transfer_fee'])
 
@@ -72,7 +75,6 @@ y_train = np.log1p(pd.to_numeric(train['transfer_fee'], errors='coerce'))
 y_test  = np.log1p(pd.to_numeric(test['transfer_fee'], errors='coerce'))
 
 logger.info(f'X_train: {X_train.shape}, X_test: {X_test.shape}, y_train: {y_train.shape}, y_test: {y_test.shape}')
-#logger.info("[INFO] Number of categorical feature:", len(cat_var))
 
 ################################################
 logger.info("[INFO] Running baseline sklearn models ...")
@@ -91,14 +93,11 @@ runner = ModelRunner(models=models)
 runner_class = ModelRunner(models=models_class, evaluator=evaluate_classification)
 train_class, test_class = processor.class_train_data, processor.class_test_data
 
-# processor.class_train_data.to_csv("class_train_data_lab_0.8.csv", index=False)
-
 X_train_class = train_class.drop(columns=['fee_class', 'transfer_fee'])
 X_test_class  = test_class.drop(columns=['fee_class', 'transfer_fee'])
 
 y_train_class = pd.to_numeric(train_class['fee_class'], errors='coerce')
 y_test_class  = pd.to_numeric(test_class['fee_class'], errors='coerce')
-# logger.info(corr.sort_values(ascending=False).head(10))
 results_class = runner_class.run(X_train_class, y_train_class, X_test_class, y_test_class)
 logger.info("\n[INFO] Classification Model Performance:")
 logger.info("\n" + results_class.to_string())
@@ -112,16 +111,6 @@ logger.info("[DONE] Baseline sklearn results computed.\n")
 logger.info("\n[INFO] Tuning XGBoost Classifier model ...")
 best_gb_model, gb_tuned_metrics = tune_xgboost_classifier(X_train_class, y_train_class, X_test_class, y_test_class, xgb_tuned_classification_params)
 logger.info("[INFO] XGBoost tuning completed.\n")
-# logger.info("\nBest XGBoost Classifier Model:")
-# logger.info("--------------------")
-# logger.info(f"n_estimators      : {best_gb_model.n_estimators}")
-# logger.info(f"learning_rate     : {best_gb_model.learning_rate}")
-# logger.info(f"min_child_weight : {best_gb_model.min_child_weight}")
-# logger.info(f"colsample_bytree  : {best_gb_model.colsample_bytree}")
-# logger.info(f"max_depth         : {best_gb_model.max_depth}")
-# logger.info(f"subsample         : {best_gb_model.subsample}")
-# logger.info(f"reg_alpha      : {best_gb_model.reg_alpha}")
-# logger.info(f"reg_lambda     : {best_gb_model.reg_lambda}")
 
 logger.info("\nModel Performance:")
 logger.info("------------------")
@@ -138,23 +127,12 @@ logger.info("[INFO] Most important features from XGBoost Classifier model:")
 importances = best_gb_model.feature_importances_
 feature_names = X_train_class.columns
 feature_importances = pd.Series(importances, index=feature_names).sort_values(ascending=False)
-feature_importances.to_csv(f"xgb_classifier_importance_{args.encoder}.csv")
-logger.info("Saved all feature importances to xgb_classifier_importances.csv")
+feature_importances.to_csv(f"results/xgb_classifier_importance_{args.encoder}.csv")
+logger.info(f"Saved feature importances to results/xgb_classifier_importance_{args.encoder}.csv")
 
 logger.info("\n[INFO] Tuning XGBoost regression model...\n")
 best_xgb_model, xgb_tuned_metrics = tune_xgboost(X_train, y_train, X_test, y_test, xgb_tuned_regressiom_params)
 logger.info("[INFO] XGBoost tuning completed.\n")
-
-# logger.info("\nBest XGBoost Model:")
-# logger.info("--------------------")
-# logger.info(f"n_estimators      : {best_xgb_model.n_estimators}")
-# logger.info(f"learning_rate     : {best_xgb_model.learning_rate}")
-# logger.info(f"min_child_weight : {best_xgb_model.min_child_weight}")
-# logger.info(f"colsample_bytree  : {best_xgb_model.colsample_bytree}")
-# logger.info(f"max_depth         : {best_xgb_model.max_depth}")
-# logger.info(f"subsample         : {best_xgb_model.subsample}")
-# logger.info(f"reg_alpha      : {best_xgb_model.reg_alpha}")
-# logger.info(f"reg_lambda     : {best_xgb_model.reg_lambda}")
 
 logger.info("\nModel Performance:")
 logger.info("------------------")
@@ -169,8 +147,8 @@ logger.info("[INFO] Most important features from XGBoost regression model:")
 importances = best_xgb_model.feature_importances_
 feature_names = X_train.columns
 feature_importances = pd.Series(importances, index=feature_names).sort_values(ascending=False)
-feature_importances.to_csv(f"xgb_regressor_importances_{args.encoder}.csv")
-logger.info("Saved all feature importances to xgb_regressor_importances.csv")
+feature_importances.to_csv(f"results/xgb_regressor_importances_{args.encoder}.csv")
+logger.info(f"Saved feature importances to results/xgb_regressor_importances_{args.encoder}.csv")
 
 ################################################
 logger.info("[INFO] Preparing CatBoost datasets (raw categoricals)...")
@@ -193,13 +171,6 @@ logger.info("[DONE] Baseline CatBoost results computed.\n")
 logger.info("[INFO] Tuning CatBoost model ...\n")
 best_cat_model, cat_metrics = tune_catboost(X_train_cat, y_train_cat, X_test_cat, y_test_cat, cat_var, catboost_tuned_params)
 logger.info("[INFO] CatBoost tuning completed.\n")
-# logger.info("\nBest CatBoost Model:")
-# logger.info("--------------------")
-# logger.info(f"iterations        : {best_cat_model.get_param('iterations')}")
-# logger.info(f"learning_rate     : {best_cat_model.get_param('learning_rate')}")
-# logger.info(f"depth             : {best_cat_model.get_param('depth')}")
-# logger.info(f"subsample         : {best_cat_model.get_param('subsample')}")
-# logger.info(f"l2_leaf_reg       : {best_cat_model.get_param('l2_leaf_reg')}")
 
 logger.info("\nModel Performance:")
 logger.info("------------------")
@@ -210,12 +181,12 @@ logger.info(f"MSE  (test) : {cat_metrics['MSE_test']:.2e}")
 logger.info(f"R²   (train): {cat_metrics['R2_train']:.4f}")
 logger.info(f"R²   (test) : {cat_metrics['R2_test']:.4f}")
 
-logger.info("[INFO] Most important features from XGBoost regression model:")
+logger.info("[INFO] Most important features from CatBoost model:")
 importances = best_cat_model.feature_importances_
 feature_names = X_train_cat.columns
 feature_importances = pd.Series(importances, index=feature_names).sort_values(ascending=False)
-feature_importances.to_csv(f"catboost_importances_{args.encoder}.csv")
-logger.info("Saved all feature importances to catboost_importances.csv")
+feature_importances.to_csv(f"results/catboost_importances_{args.encoder}.csv")
+logger.info(f"Saved feature importances to results/catboost_importances_{args.encoder}.csv")
 
 
 ################################################
