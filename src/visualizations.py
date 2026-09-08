@@ -12,7 +12,11 @@ parser.add_argument(
     default="label"
 )
 args = parser.parse_args()
+from pathlib import Path
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+FIGURES_DIR = PROJECT_ROOT / "results" / "figures"
+FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 """
 Figure 1:
 Plots the distribution of transfer fees (excluding free transfers) and the

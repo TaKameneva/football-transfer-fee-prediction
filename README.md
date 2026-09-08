@@ -10,10 +10,14 @@ bracket (classification).
 
 ```
 scraping            fbrefscraper.py / transfermarketscraper.py  →  raw per-league-season CSVs
-                     (Selenium + BeautifulSoup)
+                     (Selenium + BeautifulSoup), 8 leagues x 8 seasons (2017-18 to 2024-25):
+                     Premier League, La Liga, Bundesliga, Serie A, Ligue 1, Primeira Liga,
+                     Eredivisie, Championship
 
 data assembly        build_player_data_csv.py, build_transfer_data_csv.py
                      → data/player_data.csv, data/transfer_data.csv (raw, unscaled)
+                     662,867 player-season-half stat rows (11,108 players) and
+                     3,762 transfer records
 
 feature engineering    dataprocessor.py
                      for each transfer, aggregates the player's pre-transfer stats
@@ -22,14 +26,56 @@ feature engineering    dataprocessor.py
                      encoding, fee-bracket boundaries, and feature scaling on the
                      training split only and applies them to test (see below)
 
-modeling                run.py / models.py
-                     baseline sklearn models, then tuned XGBoost (regression +
-                     classification) and CatBoost, evaluated and logged
+modeling                run.py / models.py / generate_results.py
+                     sklearn baselines (Linear/Logistic Regression, Random Forest,
+                     Gradient Boosting) plus tuned XGBoost and CatBoost
+                     (RandomizedSearchCV), compared across label vs. one-hot
+                     encoding and CatBoost's native categorical handling —
+                     8+ model/encoder combinations evaluated for regression alone
 
-reporting                 visualizations.py
+reporting                 visualizations.py, generate_results.py
                      feature-importance and performance charts from the run's
                      saved results
 ```
+
+## Results
+
+Evaluated on a temporally held-out test set (531 transfers from later transfer windows than
+anything the models trained or were tuned on — see [Train/test methodology](#traintest-methodology)).
+Full sweep across every model/encoder combination in
+[`src/generate_results.py`](src/generate_results.py); tables in [`results/`](results).
+
+**Regression — predicting the exact fee:**
+- Best model: GradientBoosting (one-hot) — **MAE €5.50M**, R² (log-fee) **0.80** on unseen future
+  transfers.
+- That's a **65% error reduction** vs. the naive baseline of always guessing the training-set
+  average fee (€15.7M MAE) — the model is clearly extracting real signal from pre-transfer
+  performance stats, not fitting noise.
+
+**Classification — predicting the fee bracket** (5 quantile classes, see
+[`results/fee_class_boundaries.csv`](results/fee_class_boundaries.csv)):
+- Best model: GradientBoostingClassifier (label) — **59% accuracy / F1 0.59**, vs. 20% for random
+  guessing on 5 balanced classes — **~3x better than chance**.
+- The confusion matrix below shows most mistakes land on the *neighboring* bracket, not the
+  opposite end of the market: the model essentially never mistakes a bargain-tier player for a
+  world-class one.
+
+| ![Predicted vs actual transfer fee](results/figures/predicted_vs_actual.png) | ![Model comparison across encoders](results/figures/model_comparison.png) |
+|---|---|
+
+![Confusion matrix for fee-bracket classification](results/figures/confusion_matrix.png)
+
+**Limitations**
+- €5.50M MAE is still ~40% of the median test fee (€13.9M) in absolute terms — transfer fees are
+  shaped by negotiation dynamics, release clauses, and bidding-war hype that pre-transfer
+  performance stats alone can't capture, so exact-euro prediction has a hard ceiling regardless
+  of model choice.
+- Hyperparameter-tuned XGBoost and CatBoost *underperformed* the untuned GradientBoosting
+  baseline on the held-out test set — a sign the tuning search overfit its own validation split
+  rather than the true temporal test distribution, worth revisiting with tighter CV.
+- ~2,655 usable transfers after position/history filtering is a modest sample against up to 242
+  features (one-hot encoding), which caps how much signal boosted trees can extract before
+  overfitting becomes the binding constraint.
 
 ## Setup
 
