@@ -10,3 +10,6 @@ logs/
 venv/
 .venv/
 env/
+
+# Extracted from the tracked archive
+data/player_data.csv

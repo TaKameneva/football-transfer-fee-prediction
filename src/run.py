@@ -16,7 +16,7 @@ from models import (
     run_baseline_catboost
 )
 
-from standardize import standardize
+from standardize import load_data
 
 from lists import cat_var, transfer_data_num
 import logging
@@ -49,8 +49,8 @@ logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 
 ################################################
-logger.info("[START] Standardizing data ...")
-full_player_data, transfer_data = standardize()
+logger.info("[START] Loading data ...")
+full_player_data, transfer_data = load_data()
 logger.info(f'Player data: {full_player_data.shape}')
 logger.info(f'Transfer data: {transfer_data.shape}')
 ################################################
@@ -127,8 +127,8 @@ logger.info("[INFO] Most important features from XGBoost Classifier model:")
 importances = best_gb_model.feature_importances_
 feature_names = X_train_class.columns
 feature_importances = pd.Series(importances, index=feature_names).sort_values(ascending=False)
-feature_importances.to_csv(f"results/xgb_classifier_importance_{args.encoder}.csv")
-logger.info(f"Saved feature importances to results/xgb_classifier_importance_{args.encoder}.csv")
+feature_importances.to_csv(f"results/xgb_classifier_importances_{args.encoder}.csv")
+logger.info(f"Saved feature importances to results/xgb_classifier_importances_{args.encoder}.csv")
 
 logger.info("\n[INFO] Tuning XGBoost regression model...\n")
 best_xgb_model, xgb_tuned_metrics = tune_xgboost(X_train, y_train, X_test, y_test, xgb_tuned_regressiom_params)
