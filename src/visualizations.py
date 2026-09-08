@@ -3,6 +3,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import xgboost as xgb
 from sklearn.metrics import r2_score
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--encoder",
+    choices=["label", "onehot"],
+    default="label"
+)
+args = parser.parse_args()
 
 """
 Figure 1:
@@ -169,7 +178,7 @@ regression features in a horizontal bar chart.
 """
 
 importances = pd.read_csv(
-    "results/catboost_importances.csv",
+    f"results/catboost_importances_{args.encoder}.csv",
     index_col=0, header=None,
     names=["feature", "importance"],
     skiprows=1
@@ -193,7 +202,7 @@ to classification performance.
 """
 
 importances = pd.read_csv(
-    "results/xgb_classifier_importances_label.csv",
+    f"results/xgb_classifier_importances_{args.encoder}.csv",
     index_col=0, header=None,
     names=["feature", "importance"]
 )

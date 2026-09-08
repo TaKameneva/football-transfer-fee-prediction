@@ -13,16 +13,14 @@ scraping            fbrefscraper.py / transfermarketscraper.py  →  raw per-lea
                      (Selenium + BeautifulSoup)
 
 data assembly        build_player_data_csv.py, build_transfer_data_csv.py
-                     → data/player_data.csv, data/transfer_data.csv
-
-standardization       standardize.py
-                     z-score normalizes numeric player stats
+                     → data/player_data.csv, data/transfer_data.csv (raw, unscaled)
 
 feature engineering    dataprocessor.py
-                     for each transfer, aggregates the player's stats over the N
-                     season-halves before the move, encodes categoricals
-                     (label or one-hot), and derives a fee-bracket classification
-                     target alongside the log-transformed fee regression target
+                     for each transfer, aggregates the player's pre-transfer stats
+                     over the N season-halves before the move, splits chronologically
+                     into train/test, then fits correlation filtering, categorical
+                     encoding, fee-bracket boundaries, and feature scaling on the
+                     training split only and applies them to test (see below)
 
 modeling                run.py / models.py
                      baseline sklearn models, then tuned XGBoost (regression +
@@ -86,6 +84,38 @@ python src/visualizations.py
 `transfer_data.csv`, and the train/test splits) so the modeling step works out of the box.
 The raw per-league-season scrape files that feed `build_player_data_csv.py` are not included —
 regenerating them requires re-running the scrapers.
+
+> **Known limitation:** `data/player_data.csv.zip` was originally built by an earlier version
+> of `build_player_data_csv.py` that standardized numeric player stats over the *entire*
+> dataset before any split existed. That baked-in scaling can't be undone without the raw
+> per-league-season scrape files, which aren't included. `build_player_data_csv.py` itself no
+> longer does this — regenerating the dataset from a fresh scrape would produce genuinely raw,
+> unscaled stats, consistent with how the rest of the pipeline now works.
+
+## Train/test methodology
+
+The original pipeline shuffled a random 80/20 split *after* fitting standardization,
+correlation-based feature filtering, categorical encoding, and fee-bracket boundaries on the
+full dataset — leaking test-set statistics into every one of those steps. It also standardized
+player stats twice (once in `build_player_data_csv.py`, again in the loader), silently
+compounding the leak.
+
+The pipeline now:
+1. **Splits first, chronologically.** `DataProcessor.temporal_split()` sorts transfers by
+   `transfer_window_idx` and takes the most recent slice as the test set — no shuffling. This
+   also better reflects the real use case: predicting *future* transfer fees from *past* data,
+   rather than interpolating within a randomly shuffled dataset.
+2. **Fits every transform on the training split only** — correlation-based feature filtering
+   (`fit_correlation_filter`), categorical encoding (`fit_categorical_encoder`, with unseen
+   test-only categories mapped to an explicit "unknown" bucket), fee-bracket quantile edges
+   (`fit_fee_class`, with test fees outside the train range clamped to the nearest bucket
+   instead of becoming `NaN`), and feature scaling (`fit_scaler`).
+3. **Applies those fitted transforms to test unchanged** — test data never influences which
+   columns get dropped, how categories get encoded, where class boundaries fall, or the
+   scaler's mean/std.
+
+CatBoost's inputs (`catboost_train_data` / `catboost_test_data`) stay raw and unscaled by
+design — CatBoost handles native categoricals and doesn't need scaled numeric features.
 
 ## Notes
 

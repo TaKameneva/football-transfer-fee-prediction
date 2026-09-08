@@ -1,4 +1,4 @@
-from lists import leagues, seasons, player_data_cat, player_data_drop
+from lists import leagues, seasons, player_data_drop
 import pandas as pd
 import numpy as np
 import os
@@ -36,14 +36,12 @@ player_data = player_data.dropna(subset=['league', 'player_name'])
 #only keep columns relevant for analysis
 player_data = player_data.drop(columns=player_data_drop)
 
-# standardize numeric columns
-num_cols = [col for col in player_data.columns if col not in player_data_cat]
-
-player_data[num_cols] = (
-    player_data[num_cols] - player_data[num_cols].mean()
-) / player_data[num_cols].std(ddof=0)
-
-print(f'Standardized. Shape: {player_data.shape}')
+# NOTE: numeric columns are intentionally left unscaled here. Standardizing
+# at this stage would fit mean/std over the full dataset, before it's ever
+# split into train/test -- leaking test-set statistics into training.
+# Scaling now happens in DataProcessor.fit_scaler(), fit on the training
+# split only (see src/dataprocessor.py).
+print(f'Assembled. Shape: {player_data.shape}')
 
 ###############################################
 #handle nan
